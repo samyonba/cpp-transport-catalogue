@@ -104,6 +104,42 @@ Input::Request& Transport::Input::ParseBusRequest(std::string_view request, Requ
 	return result;
 }
 
+void Transport::Input::ReadInput(TransportCatalogue& catalogue, std::istream& in)
+{
+	vector<Input::Request> requests = Input::GetRequests(in);
+
+	// при первом проходе по запросам добавляем только данные о самих остановках
+	for (const auto& request : requests) {
+		if (request.type == Input::Request::Type::Stop)
+		{
+			catalogue.AddStop(request.name, request.coords);
+		}
+	}
+
+	// при втором проходе добавляем данные о расстояниях между остановками и о маршрутах
+	for (const auto& request : requests) {
+		if (request.type == Input::Request::Type::Stop)
+		{
+			const TransportCatalogue::Stop* from = catalogue.GetStop(request.name);
+			vector<pair<const TransportCatalogue::Stop*, int>> distances;
+			for (const auto& [to_name, dist] : request.distances)
+			{
+				const TransportCatalogue::Stop* to = catalogue.GetStop(to_name);
+				catalogue.SetDistance(from, to, dist);
+			}
+		}
+		if (request.type == Input::Request::Type::Bus)
+		{
+			vector<const TransportCatalogue::Stop*> stops(request.stops.size());
+			for (size_t i = 0; i < request.stops.size(); i++)
+			{
+				stops[i] = catalogue.GetStop(request.stops[i]);
+			}
+			catalogue.AddBus(request.name, stops);
+		}
+	}
+}
+
 vector<Input::Request> Input::GetRequests(std::istream& input)
 {
 	int requests_count = 0;

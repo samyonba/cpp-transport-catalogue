@@ -1,6 +1,7 @@
 #pragma once
 
 #include "geo.h"
+#include "transport_catalogue.h"
 
 #include <string>
 #include <string_view>
@@ -39,5 +40,7 @@ namespace Transport {
 		Request ParseRawRequest(std::string_view request);
 		Request& ParseStopRequest(std::string_view request, Request& result);
 		Request& ParseBusRequest(std::string_view request, Request& result);
+
+		void ReadInput(Transport::TransportCatalogue& catalogue, std::istream& in = std::cin);
 	}
 }

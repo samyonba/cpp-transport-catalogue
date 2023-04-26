@@ -78,13 +78,12 @@ const TransportCatalogue::Bus* TransportCatalogue::GetBus(std::string_view bus_n
 	return nullptr;
 }
 
-void TransportCatalogue::PrintBusInfo(const Bus* bus_p, std::ostream& out) const
+TransportCatalogue::BusInfo TransportCatalogue::GetBusInfo(const Bus* bus_p) const
 {
 	BusInfo info;
 	if (!bus_p)
 	{
-		out << info << endl;
-		return;
+		return info;
 	}
 	info.name = bus_p->name;
 
@@ -94,16 +93,15 @@ void TransportCatalogue::PrintBusInfo(const Bus* bus_p, std::ostream& out) const
 	info.geo_length = ComputeBusGeoDistance(bus_p);
 	info.real_length = ComputeBusRealDistance(bus_p);
 
-	out << info << endl;
+	return info;
 }
 
-void TransportCatalogue::PrintStopInfo(const Stop* stop_p, std::ostream& out) const
+TransportCatalogue::StopInfo TransportCatalogue::GetStopInfo(const Stop* stop_p) const
 {
 	StopInfo info;
 	if (!stop_p)
 	{
-		out << info << endl;
-		return;
+		return info;
 	}
 	info.name = stop_p->name;
 
@@ -112,15 +110,13 @@ void TransportCatalogue::PrintStopInfo(const Stop* stop_p, std::ostream& out) co
 
 	if (!stop_to_buses_.count(stop_p))
 	{
-		out << info << endl;
-		return;
+		return info;
 	}
 
 	// Остановка существует и через неё проходят маршруты
 	info.buses = &stop_to_buses_.at(stop_p);
 
-	out << info << endl;
-	return;
+	return info;
 }
 
 size_t TransportCatalogue::CountUniqueStops(const Bus* bus) const

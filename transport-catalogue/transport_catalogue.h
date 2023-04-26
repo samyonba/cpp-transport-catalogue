@@ -95,9 +95,9 @@ namespace Transport {
 		// возвращает указатель на автобус по имени
 		const Bus* GetBus(std::string_view bus_name) const;
 
-		void PrintStopInfo(const Stop* stop, std::ostream& out) const;
+		StopInfo GetStopInfo(const Stop* stop) const;
 
-		void PrintBusInfo(const Bus* bus, std::ostream& out) const;
+		BusInfo GetBusInfo(const Bus* bus) const;
 
 	private:
 

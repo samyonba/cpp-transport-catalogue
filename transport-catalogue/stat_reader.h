@@ -1,5 +1,7 @@
 #pragma once
 
+#include "transport_catalogue.h"
+
 #include <string>
 #include <vector>
 #include <iostream>
@@ -15,7 +17,7 @@ namespace Transport {
 				Bus
 			};
 
-			Type type;
+			Type type = Request::Type::Stop;
 			std::string name;
 
 			bool operator==(const Request& other) const {
@@ -23,7 +25,12 @@ namespace Transport {
 			}
 		};
 
-		Request ParseRawRequest(std::string raw_request);
-		std::vector<Request> GetRequests(std::istream& input = std::cin);
+		void ReadStat(TransportCatalogue& catalogue, std::istream& in = std::cin, std::ostream& out = std::cout);
+
+		void ParseRawRequest(std::string raw_request, TransportCatalogue& catalogue, std::ostream& out);
+
+		void PrintBusInfo(const TransportCatalogue::BusInfo& info, std::ostream& out);
+
+		void PrintStopInfo(const TransportCatalogue::StopInfo& info, std::ostream& out);
 	}
 }
