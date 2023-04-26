@@ -9,125 +9,73 @@
 using namespace std;
 using namespace Transport;
 
-////////////////////////////////////////////////////////////////// Cin
+void ReadInput(TransportCatalogue& catalogue, std::istream& in = cin) {
+    vector<Input::Request> requests = Input::GetRequests(in);
+
+    // при первом проходе по запросам добавляем только данные о самих остановках
+    for (const auto& request : requests) {
+        if (request.type == Input::Request::Type::Stop)
+        {
+            catalogue.AddStop(request.name, request.coords);
+        }
+    }
+
+    // при втором проходе добавляем данные о расстояниях между остановками и о маршрутах
+    for (const auto& request : requests) {
+        if (request.type == Input::Request::Type::Stop)
+        {
+            const TransportCatalogue::Stop* from = catalogue.GetStop(request.name);
+            vector<pair<const TransportCatalogue::Stop*, int>> distances;
+            for (const auto& [to_name, dist] : request.distances)
+            {
+                const TransportCatalogue::Stop* to = catalogue.GetStop(to_name);
+                catalogue.SetDistance(from, to, dist);
+            }
+        }
+        if (request.type == Input::Request::Type::Bus)
+        {
+            vector<const TransportCatalogue::Stop*> stops(request.stops.size());
+            for (size_t i = 0; i < request.stops.size(); i++)
+            {
+                stops[i] = catalogue.GetStop(request.stops[i]);
+            }
+            catalogue.AddBus(request.name, stops);
+        }
+    }
+}
+
+void ReadStat(TransportCatalogue& catalogue, istream& in = cin, ostream& out = cout) {
+    vector<Stat::Request> requests = Stat::GetRequests(in);
+    for (const auto& request : requests) {
+        if (request.type == Stat::Request::Type::Bus)
+        {
+            catalogue.PrintBusInfo(catalogue.GetBus(request.name), out);
+        }
+
+        if (request.type == Stat::Request::Type::Stop)
+        {
+            catalogue.PrintStopInfo(catalogue.GetStop(request.name), out);
+        }
+    }
+}
+
 int main()
 {
     TransportCatalogue catalogue;
 
-    // Начало чтения запросов на заполнение справочника
-    {
-        vector<Input::Request> requests = Input::GetRequests();
-
-        // при первом проходе по запросам добавляем только данные о самих остановках
-        for (const auto& request : requests) {
-            if (request.type == Input::Request::Type::Stop)
-            {
-                catalogue.AddStop(request.text);
-            }
-        }
-
-        // при втором проходе добавляем данные о расстояниях между остановками и о маршрутах
-        for (const auto& request : requests) {
-            if (request.type == Input::Request::Type::Stop)
-            {
-                catalogue.SetStopDistances(request.text);
-            }
-            if (request.type == Input::Request::Type::Bus)
-            {
-                catalogue.AddBus(request.text);
-            }
-        }
-    }
-    // Конец чтения запросов на заполнение справочника
+    // по умолчанию - cin/cout
+    ReadInput(catalogue);
+    ReadStat(catalogue);
 
 
-    // Начало чтения запросов к справочнику
-    {
-        vector<Stat::Request> requests = Stat::GetRequests();
-        for (const auto& request : requests) {
-            if (request.type == Stat::Request::Type::Bus)
-            {
-                cout << catalogue.GetBusInfo(request.text) << endl;
-            }
+    // file input:
 
-            if (request.type == Stat::Request::Type::Stop)
-            {
-                cout << catalogue.GetStopInfo(request.text) << endl;
-            }
-        }
-    }
+    /*ifstream in("input.txt");
+    ofstream out("output.txt");
+	if (in.is_open() && out.is_open()) {
+		ReadInput(catalogue, in);
+		ReadStat(catalogue, in, out);
+	}
+    in.close();
+    out.close();*/
 }
-////////////////////////////////////////////////////////////////// Cin
-
-////////////////////////////////////////////////////////////////// File
-//int main()
-//{
-//    //Test();
-//
-//    TransportCatalogue catalogue;
-//
-//    // Начало чтения запросов на заполнение справочника
-//    ifstream in("input.txt");
-//
-//    if (in.is_open())
-//    {
-//        vector<Input::Request> requests = Input::GetRequests(in);
-//        for (const auto& request : requests) {
-//            if (request.type == Input::Request::Type::Stop)
-//            {
-//                catalogue.AddStop(request.text);
-//            }
-//		}
-//		for (const auto& request : requests) {
-//            if (request.type == Input::Request::Type::Stop)
-//			{
-//				catalogue.SetStopDistances(request.text);
-//			}
-//			if (request.type == Input::Request::Type::Bus)
-//			{
-//				catalogue.AddBus(request.text);
-//			}
-//		}
-//	}
-//    else
-//    {
-//        cout << "Can not open file"s << endl;
-//    }
-//
-//    // Конец чтения запросов на заполнение справочника
-//
-//
-//    // Начало чтения запросов к справочнику
-//    ofstream out("output.txt");
-//
-//    if (out.is_open())
-//    {
-//        vector<Stat::Request> requests = Stat::GetRequests(in);
-//        for (const auto& request : requests) {
-//            if (request.type == Stat::Request::Type::Bus)
-//            {
-//                out << catalogue.GetBusInfo(request.text) << endl;
-//            }
-//            if (request.type == Stat::Request::Type::Stop)
-//			{
-//				out << catalogue.GetStopInfo(request.text) << endl;
-//			}
-//        }
-//    }
-//    else
-//    {
-//        cout << "Can not open file"s << endl;
-//    }
-//
-//    in.close();
-//    out.close();
-//    // Конец чтения запросов к справочнику
-//}
-////////////////////////////////////////////////////////////////// File
-
-////////////////////////////////////////////////////////////////// Test
-//int main()
-//{
-//	Tests::Test();
-//}
-////////////////////////////////////////////////////////////////// Test

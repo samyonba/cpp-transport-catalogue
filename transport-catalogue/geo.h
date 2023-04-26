@@ -7,8 +7,8 @@ namespace Transport {
     namespace Geo {
 
         struct Coordinates {
-            double lat;
-            double lng;
+            double lat = 0.;
+            double lng = 0.;
             bool operator==(const Coordinates& other) const {
                 return lat == other.lat && lng == other.lng;
             }

@@ -16,13 +16,12 @@ namespace Transport {
 			};
 
 			Type type;
-			std::string text;
+			std::string name;
 
 			bool operator==(const Request& other) const {
-				return std::make_pair(type, text) == std::make_pair(other.type, other.text);
+				return std::make_pair(type, name) == std::make_pair(other.type, other.name);
 			}
 		};
-
 
 		Request ParseRawRequest(std::string raw_request);
 		std::vector<Request> GetRequests(std::istream& input = std::cin);

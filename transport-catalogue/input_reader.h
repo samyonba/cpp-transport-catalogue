@@ -1,6 +1,9 @@
 #pragma once
 
+#include "geo.h"
+
 #include <string>
+#include <string_view>
 #include <vector>
 #include <iostream>
 
@@ -15,16 +18,26 @@ namespace Transport {
 				Bus,
 			};
 
-			Type type;
-			std::string text;
+			// Common
+			Type type = Request::Type::Stop;
+			std::string name;
+
+			// Stop
+			Geo::Coordinates coords;
+			std::vector<std::pair<std::string, int>> distances;
+
+			// Bus
+			std::vector<std::string> stops;
 
 			bool operator==(const Request& other) const {
-				return std::make_pair(type, text) == std::make_pair(other.type, other.text);
+				return std::tie(type, name, coords, distances, stops) == std::tie(other.type, other.name, other.coords, other.distances, other.stops);
 			}
 		};
 
-
-		Request ParseRawRequest(std::string raw_request);
 		std::vector<Request> GetRequests(std::istream& input = std::cin);
+
+		Request ParseRawRequest(std::string_view request);
+		Request& ParseStopRequest(std::string_view request, Request& result);
+		Request& ParseBusRequest(std::string_view request, Request& result);
 	}
 }
