@@ -1,7 +1,6 @@
-﻿#include "transport_catalogue.h"
-#include "input_reader.h"
-#include "test_transport_catalogue.h"
-#include "stat_reader.h"
+#include "transport_catalogue.h"
+#include "json_reader.h"
+#include "request_handler.h"
 
 #include <iostream>
 #include <fstream>
@@ -11,20 +10,23 @@ using namespace Transport;
 
 int main()
 {
-    TransportCatalogue catalogue;
-
-    // по умолчанию - cin/cout
-    /*Input::ReadInput(catalogue);
-    Stat::ReadStat(catalogue);*/
-
-    // file input:
-
-    ifstream in("data.txt");
-    ofstream out("output.txt");
-	if (in.is_open() && out.is_open()) {
-		Input::ReadInput(catalogue, in);
-		Stat::ReadStat(catalogue, in, out);
-	}
-    in.close();
-    out.close();
+	TransportCatalogue catalogue;
+	JsonReader json_reader(catalogue, cin, cout);
+	json_reader.ReadInput();
 }
+
+// ==================== File input =========================================================
+//int main()
+//{
+//	TransportCatalogue catalogue;
+//
+//	ifstream in("data.txt");
+//	ofstream out("output.txt");
+//	if (in.is_open() && out.is_open()) {
+//		Rendering::RenderSettings render_settings;
+//		JsonReader json_reader(catalogue, in, out);
+//		json_reader.ReadInput();
+//	}
+//	in.close();
+//	out.close();
+//}

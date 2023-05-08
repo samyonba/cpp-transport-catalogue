@@ -9,6 +9,7 @@
 #include <set>
 
 #include "geo.h"
+#include "domain.h"
 
 namespace Transport {
 
@@ -16,88 +17,33 @@ namespace Transport {
 	{
 	public:
 
-		struct Stop
-		{
-			std::string name;
-			Geo::Coordinates coords;
-
-			friend std::ostream& operator<<(std::ostream& out, const Stop& stop);
-			bool operator==(const Stop& other) const;
-		};
-
-		struct Bus
-		{
-			std::string name;
-			std::vector<const Stop*> stops;
-
-			friend std::ostream& operator<<(std::ostream& out, const Bus& bus);
-		};
-
-		struct BusInfo
-		{
-			std::string name;
-			bool exists = false;
-			size_t stops_count = 0;
-			size_t unique_stops = 0;
-			double geo_length = 0.;
-			int real_length = 0;
-
-			friend std::ostream& operator<<(std::ostream& out, const BusInfo& info);
-		};
-
-		// компаратор для определения порядка сортировки множеств внутри stop_name_to_buses_
-		struct BusComparator
-		{
-			bool operator()(const Bus* lhv, const Bus* rhv) const {
-				return lhv->name < rhv->name;
-			}
-		};
-
-		struct StopInfo
-		{
-			std::string name;
-			bool exists = false;
-			const std::set<const Bus*, BusComparator>* buses = nullptr;
-
-			friend std::ostream& operator<<(std::ostream& out, const StopInfo& info);
-		};
-
-		struct DistanceMapHasher
-		{
-			size_t operator()(std::pair<const Stop*, const Stop*> p) const {
-				std::hash<const void*> hasher;
-				return hasher(p.first) + 37 * hasher(p.second);
-			}
-		};
-
-		using DistanceMap = std::unordered_map<std::pair<const Stop*, const Stop*>, int, DistanceMapHasher>;
-
-	public:
-
-		// добавляет переданную остановку в справочник
-		void AddStop(std::string_view name, Geo::Coordinates coords);
-
-		// позволяет задать расстояние между парой остановок
-		void SetDistance(const Stop* from, const Stop* to, int dist);
-
-		// сохраняет расстояния от остановки from до каждой из вектора переданных остановок
-		void SetStopDistances(const Stop* from, std::vector<std::pair<const Stop*, int>> to_distance);
-
-		// добавляет переданный автобус(маршрут) в справочник
-		void AddBus(std::string_view name, const std::vector<const Stop*>& stops);
-
-		// возвращает указатель на остановку по имени
+		// РІРѕР·РІСЂР°С‰Р°РµС‚ СѓРєР°Р·Р°С‚РµР»СЊ РЅР° РѕСЃС‚Р°РЅРѕРІРєСѓ РїРѕ РёРјРµРЅРё
 		const Stop* GetStop(std::string_view stop_name) const;
 
-		// возвращает расстояние между остановками, заданное вручную
-		int GetRealDistance(const Stop* from, const Stop* to) const;
-
-		// возвращает указатель на автобус по имени
+		// РІРѕР·РІСЂР°С‰Р°РµС‚ СѓРєР°Р·Р°С‚РµР»СЊ РЅР° Р°РІС‚РѕР±СѓСЃ РїРѕ РёРјРµРЅРё
 		const Bus* GetBus(std::string_view bus_name) const;
 
 		StopInfo GetStopInfo(const Stop* stop) const;
 
 		BusInfo GetBusInfo(const Bus* bus) const;
+
+		// РІРѕР·РІСЂР°С‰Р°РµС‚ СЂР°СЃСЃС‚РѕСЏРЅРёРµ РјРµР¶РґСѓ РѕСЃС‚Р°РЅРѕРІРєР°РјРё, Р·Р°РґР°РЅРЅРѕРµ РІСЂСѓС‡РЅСѓСЋ
+		int GetRealDistance(const Stop* from, const Stop* to) const;
+
+		const std::deque<Bus>& GetBuses() const;
+
+		const std::vector<const Stop*> GetStops() const;
+
+		const std::set<const Bus*, BusComparator> GetBusesForStop(const Stop* stop) const;
+
+		// РґРѕР±Р°РІР»СЏРµС‚ РїРµСЂРµРґР°РЅРЅСѓСЋ РѕСЃС‚Р°РЅРѕРІРєСѓ РІ СЃРїСЂР°РІРѕС‡РЅРёРє
+		void AddStop(std::string_view name, Geo::Coordinates coords);
+
+		// РґРѕР±Р°РІР»СЏРµС‚ РїРµСЂРµРґР°РЅРЅС‹Р№ Р°РІС‚РѕР±СѓСЃ(РјР°СЂС€СЂСѓС‚) РІ СЃРїСЂР°РІРѕС‡РЅРёРє
+		void AddBus(std::string_view name, const std::vector<const Stop*>& stops, bool is_roundtrip);
+
+		// РїРѕР·РІРѕР»СЏРµС‚ Р·Р°РґР°С‚СЊ СЂР°СЃСЃС‚РѕСЏРЅРёРµ РјРµР¶РґСѓ РїР°СЂРѕР№ РѕСЃС‚Р°РЅРѕРІРѕРє
+		void SetDistance(const Stop* from, const Stop* to, int dist);
 
 	private:
 
@@ -109,24 +55,34 @@ namespace Transport {
 
 	private:
 
-		// дек для хранения данных об остановках
-		// указатели/итераторы не инвалидируются при добавлении новых
+		struct DistanceMapHasher
+		{
+			size_t operator()(std::pair<const Stop*, const Stop*> p) const {
+				std::hash<const void*> hasher;
+				return hasher(p.first) + 37 * hasher(p.second);
+			}
+		};
+
+		using DistanceMap = std::unordered_map<std::pair<const Stop*, const Stop*>, int, DistanceMapHasher>;
+
+		// РґРµРє РґР»СЏ С…СЂР°РЅРµРЅРёСЏ РґР°РЅРЅС‹С… РѕР± РѕСЃС‚Р°РЅРѕРІРєР°С…
+		// СѓРєР°Р·Р°С‚РµР»Рё/РёС‚РµСЂР°С‚РѕСЂС‹ РЅРµ РёРЅРІР°Р»РёРґРёСЂСѓСЋС‚СЃСЏ РїСЂРё РґРѕР±Р°РІР»РµРЅРёРё РЅРѕРІС‹С…
 		std::deque<Stop> stops_;
 
-		// дек для хранения данных об автобусах (маршрутах)
-		// указатели/итераторы не инвалидируются при добавлении новых
+		// РґРµРє РґР»СЏ С…СЂР°РЅРµРЅРёСЏ РґР°РЅРЅС‹С… РѕР± Р°РІС‚РѕР±СѓСЃР°С… (РјР°СЂС€СЂСѓС‚Р°С…)
+		// СѓРєР°Р·Р°С‚РµР»Рё/РёС‚РµСЂР°С‚РѕСЂС‹ РЅРµ РёРЅРІР°Р»РёРґРёСЂСѓСЋС‚СЃСЏ РїСЂРё РґРѕР±Р°РІР»РµРЅРёРё РЅРѕРІС‹С…
 		std::deque<Bus> buses_;
 
-		// хэш-мапа для быстрого обращения к остановке по её имени
+		// С…СЌС€-РјР°РїР° РґР»СЏ Р±С‹СЃС‚СЂРѕРіРѕ РѕР±СЂР°С‰РµРЅРёСЏ Рє РѕСЃС‚Р°РЅРѕРІРєРµ РїРѕ РµС‘ РёРјРµРЅРё
 		std::unordered_map<std::string_view, const Stop*> stop_name_to_stop_;
 
-		// хэш-мапа для быстрого обращения к автобусу по его имени
+		// С…СЌС€-РјР°РїР° РґР»СЏ Р±С‹СЃС‚СЂРѕРіРѕ РѕР±СЂР°С‰РµРЅРёСЏ Рє Р°РІС‚РѕР±СѓСЃСѓ РїРѕ РµРіРѕ РёРјРµРЅРё
 		std::unordered_map<std::string_view, const Bus*> bus_name_to_bus_;
 
-		// хэш-мапа для определения маршрутов, проходящих через остановку (в множестве упорядочены по имени)
+		// С…СЌС€-РјР°РїР° РґР»СЏ РѕРїСЂРµРґРµР»РµРЅРёСЏ РјР°СЂС€СЂСѓС‚РѕРІ, РїСЂРѕС…РѕРґСЏС‰РёС… С‡РµСЂРµР· РѕСЃС‚Р°РЅРѕРІРєСѓ (РІ РјРЅРѕР¶РµСЃС‚РІРµ СѓРїРѕСЂСЏРґРѕС‡РµРЅС‹ РїРѕ РёРјРµРЅРё)
 		std::unordered_map<const Stop*, std::set<const Bus*, BusComparator>> stop_to_buses_;
 
-		// хэш-мапа для хранения заданных расстояний между двумя остановками
+		// С…СЌС€-РјР°РїР° РґР»СЏ С…СЂР°РЅРµРЅРёСЏ Р·Р°РґР°РЅРЅС‹С… СЂР°СЃСЃС‚РѕСЏРЅРёР№ РјРµР¶РґСѓ РґРІСѓРјСЏ РѕСЃС‚Р°РЅРѕРІРєР°РјРё
 		DistanceMap between_stops_distances_;
 	};
 }
