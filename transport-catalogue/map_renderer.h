@@ -3,6 +3,7 @@
 #include "geo.h"
 #include "svg.h"
 #include "domain.h"
+#include "transport_catalogue.h"
 
 #include <algorithm>
 #include <cstdlib>
@@ -113,15 +114,28 @@ namespace Transport {
         class MapRenderer
         {
         public:
-            void AddRoute(const Transport::Bus& route, const SphereProjector& projector, const RenderSettings& settings);
-            void AddRouteTitle(const Transport::Bus& route, const SphereProjector& projector, const RenderSettings& settings);
-            void AddStopCircle(const Transport::Stop& stop, const SphereProjector& projector, const RenderSettings& settings);
-            void AddStopTitle(const Transport::Stop& stop, const SphereProjector& projector, const RenderSettings& settings);
+            MapRenderer(const TransportCatalogue& catalogue, const SphereProjector& projector, const RenderSettings& settings, std::ostream& out = std::cout)
+                : catalogue_(catalogue), projector_(projector), settings_(settings), out_(out) {}
 
-            void Render(std::ostream& out = std::cout);
+            void Render();
 
         private:
+            void AddRoutes();
+            void AddStops();
+
+            void AddRoute(const Transport::Bus& route);
+            void AddRouteTitle(const Transport::Bus& route);
+            void AddStopCircle(const Transport::Stop& stop);
+            void AddStopTitle(const Transport::Stop& stop);
+
+        private:
+            const TransportCatalogue& catalogue_;
+            const SphereProjector& projector_;
+            const RenderSettings& settings_;
+            std::ostream& out_;
+
             svg::Document canvas_;
+            std::vector<svg::Polyline> routes_;
             std::vector<svg::Text> route_titles_;
             std::vector<svg::Circle> stop_circles_;
             std::vector<svg::Text> stop_titles_;

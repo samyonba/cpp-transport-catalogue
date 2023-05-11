@@ -154,7 +154,7 @@ namespace json {
             throw ParsingError("");
         }
 
-        return Node(move(result));
+        return Node(result);
     }
 
     Node LoadDict(istream& input) {
@@ -267,36 +267,12 @@ namespace json {
         }
     }
 
-    Node::Node()
-        :data_(std::nullptr_t{}) {}
-
-    Node::Node(int value)
-        : data_(value) {}
-
-    Node::Node(double value)
-        : data_(value) {}
-
-    Node::Node(bool value)
-        : data_(value) {}
-
-    Node::Node(string value)
-        : data_(move(value)) {}
-
-    Node::Node(std::nullptr_t value)
-        : data_(value) {}
-
-    Node::Node(Array array)
-        : data_(move(array)) {}
-
-    Node::Node(Dict map)
-        : data_(move(map)) {}
-
     int Node::AsInt() const {
         if (!IsInt())
         {
             throw logic_error("Error value type");
         }
-        return get<int>(data_);
+        return get<int>(*this);
     }
 
     bool Node::AsBool() const
@@ -305,7 +281,7 @@ namespace json {
         {
             throw logic_error("Error value type");
         }
-        return get<bool>(data_);
+        return get<bool>(*this);
     }
 
     double Node::AsDouble() const
@@ -316,11 +292,11 @@ namespace json {
         }
         if (IsPureDouble())
         {
-            return get<double>(data_);
+            return get<double>(*this);
         }
         else
         {
-            return static_cast<double>(get<int>(data_));
+            return static_cast<double>(get<int>(*this));
         }
     }
 
@@ -329,7 +305,7 @@ namespace json {
         {
             throw logic_error("Error value type");
         }
-        return get<string>(data_);
+        return get<string>(*this);
     }
 
     const Array& Node::AsArray() const {
@@ -337,7 +313,7 @@ namespace json {
         {
             throw logic_error("Error value type");
         }
-        return get<Array>(data_);
+        return get<Array>(*this);
     }
 
     const Dict& Node::AsMap() const {
@@ -345,52 +321,52 @@ namespace json {
         {
             throw logic_error("Error value type");
         }
-        return get<Dict>(data_);
+        return get<Dict>(*this);
     }
 
     bool Node::IsInt() const
     {
-        return holds_alternative<int>(data_);
+        return holds_alternative<int>(*this);
     }
 
     bool Node::IsDouble() const
     {
-        return holds_alternative<int>(data_) || holds_alternative<double>(data_);
+        return holds_alternative<int>(*this) || holds_alternative<double>(*this);
     }
 
     bool Node::IsPureDouble() const
     {
-        return holds_alternative<double>(data_);
+        return holds_alternative<double>(*this);
     }
 
     bool Node::IsBool() const
     {
-        return holds_alternative<bool>(data_);
+        return holds_alternative<bool>(*this);
     }
 
     bool Node::IsString() const
     {
-        return holds_alternative<string>(data_);
+        return holds_alternative<string>(*this);
     }
 
     bool Node::IsNull() const
     {
-        return holds_alternative<nullptr_t>(data_);
+        return holds_alternative<nullptr_t>(*this);
     }
 
     bool Node::IsArray() const
     {
-        return holds_alternative<Array>(data_);
+        return holds_alternative<Array>(*this);
     }
 
     bool Node::IsMap() const
     {
-        return holds_alternative<Dict>(data_);
+        return holds_alternative<Dict>(*this);
     }
 
     bool Node::operator==(const Node& other) const
     {
-        return data_ == other.data_;
+        return static_cast<Variant>(*this) == static_cast<Variant>(other);
     }
 
     bool Node::operator!=(const Node& other) const
@@ -445,7 +421,6 @@ namespace json {
 
     void Node::NodePrinter::operator()(bool value) const
     {
-        //context.out << boolalpha << (value) ? "true" : "false";
         if (value)
         {
             context.out << boolalpha << true;
@@ -509,21 +484,21 @@ namespace json {
 
     void Node::NodePrinter::operator()(Dict value) const
     {
-        context.out << '{';
+        context.out << "{\n";
         size_t i = 0;
         for (const auto& [key, val] : value) {
             if (i > 0) {
-                context.out << ',';
+                context.out << ",\n";
             }
             context.out << '\"' << key << "\": ";
             val.Print(context.out);
             ++i;
         }
-        context.out << '}';
+        context.out << "\n}";
     }
 
     void Node::Print(std::ostream& out) const
     {
-        visit(NodePrinter{ PrintContext{out, 4, 0} }, data_);
+        visit(NodePrinter{ PrintContext{out, 4, 0} }, static_cast<Variant>(*this));
     }
 }  // namespace json

@@ -24,18 +24,20 @@ namespace json {
         using runtime_error::runtime_error;
     };
 
-    class Node {
+    class Node : public Variant {
     public:
         /* Реализуйте Node, используя std::variant */
 
-        Node();
+        /*Node();
         Node(int value);
         Node(double value);
         Node(bool value);
         Node(std::string value);
         Node(std::nullptr_t value);
         Node(Array array);
-        Node(Dict map);
+        Node(Dict map);*/
+
+        using Variant::variant;
 
         int AsInt() const;
         bool AsBool() const;
@@ -89,7 +91,7 @@ namespace json {
             void operator()(Dict value) const;
         };
 
-        Variant data_;
+        //Variant data_;
     };
 
     class Document {
