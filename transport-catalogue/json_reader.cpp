@@ -1,5 +1,6 @@
 #include "json_reader.h"
 #include "request_handler.h"
+#include "json_builder.h"
 
 #include <sstream>
 
@@ -14,14 +15,14 @@ void Transport::JsonReader::ReadInput()
     Document document = Load(in_);
 
     // вектор запросов (маршруты/остановки)
-    const auto& base_requests = document.GetRoot().AsMap().at("base_requests").AsArray();
+    const auto& base_requests = document.GetRoot().AsDict().at("base_requests").AsArray();
     ReadBaseRequests(base_requests);
 
-    const auto& render_settings = document.GetRoot().AsMap().at("render_settings").AsMap();
+    const auto& render_settings = document.GetRoot().AsDict().at("render_settings").AsDict();
     ReadRenderSettings(render_settings);
 
     out_ << "[\n";
-    const auto& stat_requests = document.GetRoot().AsMap().at("stat_requests").AsArray();
+    const auto& stat_requests = document.GetRoot().AsDict().at("stat_requests").AsArray();
     ReadStatRequests(stat_requests);
     out_ << "]\n";
 }
@@ -78,7 +79,7 @@ void Transport::JsonReader::ReadStop(const json::Dict& attributes) {
 
 void Transport::JsonReader::ReadDistances(const json::Dict& attributes) {
     const Stop* from = catalogue_.GetStop(attributes.at("name").AsString());
-    for (const auto& [to_name, dist_node] : attributes.at("road_distances").AsMap()) {
+    for (const auto& [to_name, dist_node] : attributes.at("road_distances").AsDict()) {
         const Stop* to = catalogue_.GetStop(to_name);
         catalogue_.SetDistance(from, to, dist_node.AsInt());
     }
@@ -107,7 +108,7 @@ void Transport::JsonReader::ReadBaseRequests(const json::Array& base_requests) {
     // при первом проходе по запросам добавляем только данные о самих остановках
     // request - словарь { атрибут - значение }
     for (const auto& request : base_requests) {
-        auto& attributes = request.AsMap();
+        auto& attributes = request.AsDict();
         if (attributes.at("type").AsString() == "Stop")
         {
             ReadStop(attributes);
@@ -116,7 +117,7 @@ void Transport::JsonReader::ReadBaseRequests(const json::Array& base_requests) {
 
     // при втором проходе добавляем данные о расстояниях между остановками и о маршрутах
     for (const auto& request : base_requests) {
-        auto& attributes = request.AsMap();
+        auto& attributes = request.AsDict();
 
         if (attributes.at("type").AsString() == "Stop")
         {
@@ -130,69 +131,85 @@ void Transport::JsonReader::ReadBaseRequests(const json::Array& base_requests) {
 }
 
 void Transport::JsonReader::PrintJsonStopInfo(const Transport::StopInfo& info, int request_id) {
-    using namespace json;
 
-    Dict output;
-	output["request_id"] = Node(request_id);
-
-    if (!info.exists)
-    {
-        output["error_message"] = Node("not found"s);
-        Print(Document(output), out_);
-        out_ << '\n';
+	if (!info.exists)
+	{
+		json::Print(
+			json::Document{
+				json::Builder{}.StartDict()
+			.Key("request_id"s).Value(request_id)
+			.Key("error_message"s).Value("not found"s)
+			.EndDict().Build()
+			},
+			out_
+		);
+		out_ << endl;
         return;
     }
+    json::Builder builder;
+    auto b = builder.StartDict()
+        .Key("request_id"s).Value(request_id)
+        .Key("buses"s).StartArray();
 
-    Array buses;
     if (info.buses)
     {
         for (const auto& bus : *info.buses) {
-            buses.push_back(Node(bus->name));
+            b.Value(bus->name);
         }
     }
-    output["buses"] = buses;
 
-    Print(Document(output), out_);
-    out_ << '\n';
+    json::Print(json::Document{ b.EndArray().EndDict().Build()},out_ );
+    out_ << endl;
+    return;
 }
 
 void Transport::JsonReader::PrintJsonBusInfo(const Transport::BusInfo& info, int request_id) {
-    using namespace json;
-
-    Dict output;
-    output["request_id"] = Node(request_id);
 
     if (!info.exists)
     {
-        output["error_message"] = Node("not found"s);
-        Print(Document(output), out_);
-        out_ << '\n';
+        json::Print(
+            json::Document{
+                json::Builder{}.StartDict()
+            .Key("request_id"s).Value(request_id)
+            .Key("error_message"s).Value("not found"s)
+            .EndDict().Build()
+            },
+            out_
+        );
+        out_ << endl;
         return;
     }
 
-    output["curvature"] = Node(double(info.real_length) / info.geo_length);
-    output["route_length"] = Node(info.real_length);
-    output["stop_count"] = Node(int(info.stops_count));
-    output["unique_stop_count"] = Node(int(info.unique_stops));
-
-    Print(Document(output), out_);
-    out_ << '\n';
+    json::Print(
+        json::Document{
+            json::Builder{}.StartDict()
+        .Key("request_id"s).Value(request_id)
+        .Key("curvature"s).Value(double(info.real_length) / info.geo_length)
+        .Key("route_length").Value(info.real_length)
+        .Key("stop_count").Value(int(info.stops_count))
+        .Key("unique_stop_count").Value(int(info.unique_stops))
+        .EndDict().Build()
+        },
+        out_
+    );
+    out_ << endl;
 }
 
 void Transport::JsonReader::PrintJsonMap(int request_id)
 {
-    using namespace json;
-
-    Dict map_json;
-    map_json["request_id"] = Node(request_id);
-
     ostringstream map_ostream;
     RenderCatalogue(catalogue_, settings_, map_ostream);
-    
-    map_json["map"] = Node(map_ostream.str());
 
-    Print(Document(map_json), out_);
-    out_ << '\n';
+    json::Print(
+        json::Document{
+            json::Builder{}.StartDict()
+        .Key("request_id"s).Value(request_id)
+        .Key("map"s).Value(map_ostream.str())
+        .EndDict().Build()
+        },
+        out_
+    );
+    out_ << endl;
 }
 
 void Transport::JsonReader::ReadStatRequests(const json::Array& stat_requests) {
@@ -202,7 +219,7 @@ void Transport::JsonReader::ReadStatRequests(const json::Array& stat_requests) {
         {
             out_ << ",\n";
         }
-        auto& attributes = stat_requests[i].AsMap();
+        auto& attributes = stat_requests[i].AsDict();
 
         string type = attributes.at("type").AsString();
         int request_id = attributes.at("id").AsInt();
