@@ -12,7 +12,7 @@ SphereProjector MakeProjector(const TransportCatalogue& catalogue, const RenderS
 			all_coords.push_back(stop->coords);
 		}
 	}
-	 return SphereProjector(all_coords.begin(), all_coords.end(), settings.width, settings.height, settings.padding);
+	return SphereProjector(all_coords.begin(), all_coords.end(), settings.width, settings.height, settings.padding);
 }
 
 void Transport::Rendering::RenderCatalogue(const TransportCatalogue& catalogue, const RenderSettings& settings, std::ostream& out)

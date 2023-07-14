@@ -21,6 +21,9 @@ void Transport::JsonReader::ReadInput()
     const auto& render_settings = document.GetRoot().AsDict().at("render_settings").AsDict();
     ReadRenderSettings(render_settings);
 
+    const auto& router_settings = document.GetRoot().AsDict().at("routing_settings").AsDict();
+    ReadRouterSettings(router_settings);
+
     out_ << "[\n";
     const auto& stat_requests = document.GetRoot().AsDict().at("stat_requests").AsArray();
     ReadStatRequests(stat_requests);
@@ -47,28 +50,28 @@ svg::Color ReadColor(json::Node node) {
 
 void Transport::JsonReader::ReadRenderSettings(const json::Dict& attributes)
 {
-    settings_.width = attributes.at("width").AsDouble();
-    settings_.height = attributes.at("height").AsDouble();
+    render_settings_.width = attributes.at("width").AsDouble();
+    render_settings_.height = attributes.at("height").AsDouble();
 
-    settings_.padding = attributes.at("padding").AsDouble();
+    render_settings_.padding = attributes.at("padding").AsDouble();
 
-    settings_.line_width = attributes.at("line_width").AsDouble();
-    settings_.stop_radius = attributes.at("stop_radius").AsDouble();
+    render_settings_.line_width = attributes.at("line_width").AsDouble();
+    render_settings_.stop_radius = attributes.at("stop_radius").AsDouble();
 
-    settings_.bus_label_font_size = attributes.at("bus_label_font_size").AsInt();
+    render_settings_.bus_label_font_size = attributes.at("bus_label_font_size").AsInt();
     const auto& bus_offset_array = attributes.at("bus_label_offset").AsArray();
-    settings_.bus_label_offset = { bus_offset_array[0].AsDouble(), bus_offset_array[1].AsDouble()};
+    render_settings_.bus_label_offset = { bus_offset_array[0].AsDouble(), bus_offset_array[1].AsDouble()};
 
-    settings_.stop_label_font_size = attributes.at("stop_label_font_size").AsInt();
+    render_settings_.stop_label_font_size = attributes.at("stop_label_font_size").AsInt();
     const auto& stop_offset_array = attributes.at("stop_label_offset").AsArray();
-    settings_.stop_label_offset = { stop_offset_array[0].AsDouble(), stop_offset_array[1].AsDouble() };
+    render_settings_.stop_label_offset = { stop_offset_array[0].AsDouble(), stop_offset_array[1].AsDouble() };
 
-    settings_.underlayer_color = ReadColor(attributes.at("underlayer_color"));
-    settings_.underlayer_width = attributes.at("underlayer_width").AsDouble();
+    render_settings_.underlayer_color = ReadColor(attributes.at("underlayer_color"));
+    render_settings_.underlayer_width = attributes.at("underlayer_width").AsDouble();
 
     const auto& palette_array = attributes.at("color_palette").AsArray();
     for (const auto& color : palette_array) {
-        settings_.color_palette.push_back(ReadColor(color));
+        render_settings_.color_palette.push_back(ReadColor(color));
     }
 }
 
@@ -128,6 +131,12 @@ void Transport::JsonReader::ReadBaseRequests(const json::Array& base_requests) {
             ReadBus(attributes);
         }
     }
+}
+
+void Transport::JsonReader::ReadRouterSettings(const json::Dict& attributes)
+{
+    routing_settings_.bus_wait_time = attributes.at("bus_wait_time").AsInt();
+    routing_settings_.bus_velocity = attributes.at("bus_velocity").AsInt();
 }
 
 void Transport::JsonReader::PrintJsonStopInfo(const Transport::StopInfo& info, int request_id) {
@@ -198,7 +207,7 @@ void Transport::JsonReader::PrintJsonBusInfo(const Transport::BusInfo& info, int
 void Transport::JsonReader::PrintJsonMap(int request_id)
 {
     ostringstream map_ostream;
-    RenderCatalogue(catalogue_, settings_, map_ostream);
+    RenderCatalogue(catalogue_, render_settings_, map_ostream);
 
     json::Print(
         json::Document{
@@ -212,7 +221,55 @@ void Transport::JsonReader::PrintJsonMap(int request_id)
     out_ << endl;
 }
 
+void Transport::JsonReader::PrintJsonRoute(const string_view from, const string_view to, int request_id, Routing::TransportRouter& router)
+{
+    auto route_info = router.BuildRoute(from, to);
+
+    json::Builder builder;
+    auto b = builder.StartDict()
+        .Key("request_id"s).Value(request_id);
+    if (!route_info)
+    {
+        b.Key("error_message"s).Value("not found"s);
+    }
+    else
+    {
+        auto items = b.Key("total_time"s).Value(route_info.value().weight)
+            .Key("items"s).StartArray();
+
+        auto PrintItem = [&](graph::EdgeId id) {
+            json::Builder builder;
+            auto c = builder.StartDict();
+            auto info = router.GetEdgeInfo(id);
+            if (info.span_count == 0)
+            {
+                c.Key("type"s).Value("Wait"s)
+                    .Key("stop_name"s).Value(info.name);
+            }
+            else
+            {
+                c.Key("type"s).Value("Bus"s)
+                    .Key("bus"s).Value(info.name)
+                    .Key("span_count").Value(int(info.span_count));
+            }
+            c.Key("time"s).Value(info.weight);
+            return c.EndDict().Build();
+        };
+        
+        for (const auto& edge_id : route_info.value().edges)
+        {
+            items.Value(PrintItem(edge_id));
+        }
+        items.EndArray();
+    }
+	json::Print(json::Document(b.EndDict().Build()), out_);
+}
+
 void Transport::JsonReader::ReadStatRequests(const json::Array& stat_requests) {
+
+    // маршрутизатор создается один раз перед обработкой всех запросов
+    Routing::TransportRouter router(catalogue_, routing_settings_);
+
     for (size_t i = 0; i < stat_requests.size(); i++)
     {
         if (i != 0)
@@ -236,6 +293,12 @@ void Transport::JsonReader::ReadStatRequests(const json::Array& stat_requests) {
         if (type == "Map")
         {
             PrintJsonMap(request_id);
+        }
+        if (type == "Route")
+        {
+            auto& from = attributes.at("from").AsString();
+            auto& to = attributes.at("to").AsString();
+            PrintJsonRoute(from, to, request_id, router);
         }
     }
 }

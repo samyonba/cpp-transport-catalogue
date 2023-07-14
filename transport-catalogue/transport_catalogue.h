@@ -34,6 +34,8 @@ namespace Transport {
 
 		const std::vector<const Stop*> GetStops() const;
 
+		size_t GetStopsCount() const;
+
 		const std::set<const Bus*, BusComparator> GetBusesForStop(const Stop* stop) const;
 
 		// добавляет переданную остановку в справочник

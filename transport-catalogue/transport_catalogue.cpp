@@ -103,6 +103,11 @@ const std::vector<const Stop*> Transport::TransportCatalogue::GetStops() const
 	return result;
 }
 
+size_t Transport::TransportCatalogue::GetStopsCount() const
+{
+	return stops_.size();
+}
+
 const std::set<const Bus*, BusComparator> Transport::TransportCatalogue::GetBusesForStop(const Stop* stop) const
 {
 	if (stop_to_buses_.count(stop))
