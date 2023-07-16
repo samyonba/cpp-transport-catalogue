@@ -23,7 +23,12 @@ namespace Transport {
 		class TransportRouter {
 		public:
 			TransportRouter(const Transport::TransportCatalogue& catalogue, RouterSettings settings)
-				: catalogue_(catalogue), routing_settings_(settings), vertex_index_(std::move(BuildVertexIndex())), edges_info_(), graph_(BuildGraph()), router_(graph_) {}
+			  : catalogue_(catalogue),
+				routing_settings_(settings),
+				vertex_index_(std::move(BuildVertexIndex())),
+				edges_info_(),
+				graph_(BuildGraph()),
+				router_(graph_) {}
 
 			// построить кратчайший маршрут, указав названия остановок отправления и назначения
 			std::optional<graph::Router<double>::RouteInfo> BuildRoute(std::string_view from, std::string_view to) const;
@@ -37,6 +42,9 @@ namespace Transport {
 
 			// строит граф по данным из catalogue_
 			graph::DirectedWeightedGraph<double> BuildGraph();
+			void AddStops(graph::DirectedWeightedGraph<double>& graph);
+			void AddRoutes(graph::DirectedWeightedGraph<double>& graph);
+			void AddRoute(size_t from_index, size_t to_index, const Transport::Bus& route, graph::DirectedWeightedGraph<double>& graph);
 
 			std::unordered_map<const Stop*, size_t> BuildVertexIndex();
 
