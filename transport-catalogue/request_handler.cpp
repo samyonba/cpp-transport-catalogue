@@ -6,7 +6,7 @@ using namespace Rendering;
 SphereProjector MakeProjector(const TransportCatalogue& catalogue, const RenderSettings& settings) {
 	std::vector<Geo::Coordinates> all_coords;
 	for (const Stop* stop : catalogue.GetStops()) {
-		const auto buses_ptr = catalogue.GetBusesForStop(stop);
+		const auto buses_ptr = catalogue.GetStopToBuses(stop);
 		if (!buses_ptr.empty())
 		{
 			all_coords.push_back(stop->coords);

@@ -1,15 +1,18 @@
 #pragma once
 
+#include <utility>
 #include "transport_catalogue.h"
 #include "router.h"
+
+#include "serialization.h"
 
 namespace Transport {
 	namespace Routing {
 		struct RouterSettings {
-			// РІСЂРµРјСЏ РѕР¶РёРґР°РЅРёСЏ Р°РІС‚РѕР±СѓСЃР° РЅР° РѕСЃС‚Р°РЅРѕРІРєРµ, РІ РјРёРЅСѓС‚Р°С…. Р—РЅР°С‡РµРЅРёРµ вЂ” С†РµР»РѕРµ С‡РёСЃР»Рѕ РѕС‚ 1 РґРѕ 1000
+			// время ожидания автобуса на остановке, в минутах. Значение — целое число от 1 до 1000
 			int bus_wait_time = 6;
 
-			// СЃРєРѕСЂРѕСЃС‚СЊ Р°РІС‚РѕР±СѓСЃР°, РІ РєРј/С‡. Р—РЅР°С‡РµРЅРёРµ вЂ” РІРµС‰РµСЃС‚РІРµРЅРЅРѕРµ С‡РёСЃР»Рѕ РѕС‚ 1 РґРѕ 1000
+			// скорость автобуса, в км/ч. Значение — вещественное число от 1 до 1000
 			int bus_velocity = 40;
 		};
 
@@ -21,26 +24,33 @@ namespace Transport {
 		};
 
 		class TransportRouter {
+			//friend void serialization::SerializeTransportRouter(const TransportRouter&, tc_serialization::TransportRouter&);
+
 		public:
 			TransportRouter(const Transport::TransportCatalogue& catalogue, RouterSettings settings)
 			  : catalogue_(catalogue),
-				routing_settings_(settings),
+				router_settings_(settings),
 				vertex_index_(std::move(BuildVertexIndex())),
 				edges_info_(),
 				graph_(BuildGraph()),
 				router_(graph_) {}
 
-			// РїРѕСЃС‚СЂРѕРёС‚СЊ РєСЂР°С‚С‡Р°Р№С€РёР№ РјР°СЂС€СЂСѓС‚, СѓРєР°Р·Р°РІ РЅР°Р·РІР°РЅРёСЏ РѕСЃС‚Р°РЅРѕРІРѕРє РѕС‚РїСЂР°РІР»РµРЅРёСЏ Рё РЅР°Р·РЅР°С‡РµРЅРёСЏ
+			// построить кратчайший маршрут, указав названия остановок отправления и назначения
 			std::optional<graph::Router<double>::RouteInfo> BuildRoute(std::string_view from, std::string_view to) const;
 
-			// РїРѕР»СѓС‡РёС‚СЊ СЃРїСЂР°РІРѕС‡РЅСѓСЋ РёРЅС„РѕСЂРјР°С†РёСЋ Рѕ СЂРµР±СЂРµ РіСЂР°С„Р°
+			// получить справочную информацию о ребре графа
 			EdgeInfo GetEdgeInfo(graph::EdgeId id) const;
+			
+			const RouterSettings& GetRouterSettings() const;
+			const std::vector<EdgeInfo>& GetEdgesInfo() const;
+			const graph::DirectedWeightedGraph<double>& GetGraph() const;
+			const graph::Router<double>& GetRouter() const;
 
 		private:
-			// РїСЂРµРѕР±СЂР°Р·СѓРµС‚ СЂР°СЃСЃС‚РѕСЏРЅРёРµ РІ РІРµСЃ РѕС‚СЂРµР·РєР° РІ РјРёРЅСѓС‚Р°С… РґР»СЏ Р·Р°РґР°РЅРЅРѕР№ РІ routing_settings_ СЃРєРѕСЂРѕСЃС‚Рё Р°РІС‚РѕР±СѓСЃРѕРІ
+			// преобразует расстояние в вес отрезка в минутах для заданной в routing_settings_ скорости автобусов
 			double CalculateWeight(double distance) const;
 
-			// СЃС‚СЂРѕРёС‚ РіСЂР°С„ РїРѕ РґР°РЅРЅС‹Рј РёР· catalogue_
+			// строит граф по данным из catalogue_
 			graph::DirectedWeightedGraph<double> BuildGraph();
 			void AddStops(graph::DirectedWeightedGraph<double>& graph);
 			void AddRoutes(graph::DirectedWeightedGraph<double>& graph);
@@ -51,19 +61,53 @@ namespace Transport {
 		private:
 			const Transport::TransportCatalogue& catalogue_;
 
-			// РЅР°СЃС‚СЂРѕР№РєРё РјР°СЂС€СЂСѓС‚РёР·Р°С‚РѕСЂР°
-			RouterSettings routing_settings_;
+			// настройки маршрутизатора
+			RouterSettings router_settings_;
 
-			// СЃР»РѕРІР°СЂСЊ, СЃРѕРїРѕСЃС‚Р°РІР»СЏСЋС‰РёР№ СѓРєР°Р·Р°С‚РµР»СЋ РЅР° РѕСЃС‚Р°РЅРѕРІРєСѓ РёРЅРґРµРєСЃ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РµР№ РµРјСѓ РІРµСЂС€РёРЅС‹ РіСЂР°С„Р° (РІС…РѕРґР° РЅР° РѕСЃС‚Р°РЅРѕРІРєСѓ)
+			// словарь, сопоставляющий указателю на остановку индекс соответствующей ему вершины графа (входа на остановку)
 			std::unordered_map<const Stop*, size_t> vertex_index_;
 
-			// СЃРїСЂР°РІРѕС‡РЅР°СЏ РёРЅС„РѕСЂРјР°С†РёСЏ Рѕ СЂРµР±СЂР°С… РіСЂР°С„Р°
+			// справочная информация о ребрах графа
 			std::vector<EdgeInfo> edges_info_;
 
 			graph::DirectedWeightedGraph<double> graph_;
 
-			// РјР°СЂС€СЂСѓС‚РёР·Р°С‚РѕСЂ
+			// маршрутизатор
 			graph::Router<double> router_;
+		};
+
+		class LightTransportRouter
+		{
+		public:
+			LightTransportRouter() = default;
+
+			LightTransportRouter(const TransportCatalogue& catalogue,
+				const std::vector<EdgeInfo>& edges_info,
+				const std::vector<graph::Edge<double>>& edges,
+				const graph::Router<double>::RoutesInternalData& routes_internal_data);
+
+			// построить кратчайший маршрут, указав названия остановок отправления и назначения
+			std::optional<graph::Router<double>::RouteInfo> BuildRoute(std::string_view from, std::string_view to) const;
+
+			EdgeInfo GetEdgeInfo(graph::EdgeId id) const;
+
+		private:
+			std::unordered_map<const Stop*, size_t> BuildVertexIndex();
+
+		private:
+			const TransportCatalogue& catalogue_;
+
+			// справочная информация о ребрах пути
+			std::vector<EdgeInfo> edges_info_;
+
+			// ребра графа
+			std::vector<graph::Edge<double>> edges_;
+
+			// информация об оптимальных маршрутах
+			graph::Router<double>::RoutesInternalData routes_internal_data_;
+			
+			// словарь, сопоставляющий указателю на остановку индекс соответствующей ему вершины графа (входа на остановку)
+			std::unordered_map<const Stop*, size_t> vertex_index_;
 		};
 	}
 }

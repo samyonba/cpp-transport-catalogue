@@ -55,7 +55,7 @@ namespace Transport {
 	std::ostream& operator<<(std::ostream& out, const StopInfo& info);
 	std::ostream& operator<<(std::ostream& out, const BusInfo& info);
 
-	// ÐºÐ¾Ð¼Ð¿Ð°Ñ€Ð°Ñ‚Ð¾Ñ€ Ð´Ð»Ñ Ð¾Ð¿Ñ€ÐµÐ´ÐµÐ»ÐµÐ½Ð¸Ñ Ð¿Ð¾Ñ€ÑÐ´ÐºÐ° ÑÐ¾Ñ€Ñ‚Ð¸Ñ€Ð¾Ð²ÐºÐ¸ Ð¼Ð½Ð¾Ð¶ÐµÑÑ‚Ð² Ð²Ð½ÑƒÑ‚Ñ€Ð¸ stop_name_to_buses_
+	// êîìïàðàòîð äëÿ îïðåäåëåíèÿ ïîðÿäêà ñîðòèðîâêè ìíîæåñòâ âíóòðè stop_name_to_buses_
 	struct BusComparator
 	{
 		bool operator()(const Bus* lhv, const Bus* rhv) const;

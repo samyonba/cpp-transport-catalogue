@@ -76,9 +76,9 @@ DictItemContext json::Builder::StartDict()
 
 	if (nodes_stack_.back()->IsArray())
 	{
-		// РґРѕР±Р°РІР»СЏРµС‚ СЌР»РµРјРµРЅС‚ РїРѕСЃР»РµРґРЅРµРіРѕ РѕС‚РєСЂС‹С‚РѕРіРѕ РјР°СЃСЃРёРІР°
+		// добавляет элемент последнего открытого массива
 		const_cast<Array&>(nodes_stack_.back()->AsArray()).push_back(Dict());
-		// РґРѕР±Р°РІР»СЏРµС‚ РІ nodes_stack_ СѓРєР°Р·Р°С‚РµР»СЊ РЅР° РґРѕР±Р°РІР»РµРЅРЅС‹Р№ Node(Dict);
+		// добавляет в nodes_stack_ указатель на добавленный Node(Dict);
 		nodes_stack_.push_back(&(const_cast<Array&>(nodes_stack_.back()->AsArray()).back()));
 	}
 	if (nodes_stack_.back()->IsString())
@@ -86,9 +86,9 @@ DictItemContext json::Builder::StartDict()
 		const string key = nodes_stack_.back()->AsString();
 		nodes_stack_.pop_back();
 		key_buffer_.pop_back();
-		// РґРѕР±Р°РІР»СЏРµС‚ СЌР»РµРјРµРЅС‚ РІ РїРѕСЃР»РµРґРЅРёР№ РѕС‚РєСЂС‹С‚С‹Р№ СЃР»РѕРІР°СЂСЊ
+		// добавляет элемент в последний открытый словарь
 		const_cast<Dict&>(nodes_stack_.back()->AsDict()).insert({ key, Dict() });
-		// РґРѕР±Р°РІР»СЏРµС‚ РІ nodes_stack_ СѓРєР°Р·Р°С‚РµР»СЊ РЅР° РґРѕР±Р°РІР»РµРЅРЅС‹Р№ Node(Dict);
+		// добавляет в nodes_stack_ указатель на добавленный Node(Dict);
 		nodes_stack_.push_back(&(const_cast<Dict&>(nodes_stack_.back()->AsDict())[key]));
 	};
 
@@ -115,9 +115,9 @@ ArrayItemContext json::Builder::StartArray()
 
 	if (nodes_stack_.back()->IsArray())
 	{
-		// РґРѕР±Р°РІР»СЏРµС‚ СЌР»РµРјРµРЅС‚ РїРѕСЃР»РµРґРЅРµРіРѕ РѕС‚РєСЂС‹С‚РѕРіРѕ РјР°СЃСЃРёРІР°
+		// добавляет элемент последнего открытого массива
 		const_cast<Array&>(nodes_stack_.back()->AsArray()).push_back(Array());
-		// РґРѕР±Р°РІР»СЏРµС‚ РІ nodes_stack_ СѓРєР°Р·Р°С‚РµР»СЊ РЅР° РґРѕР±Р°РІР»РµРЅРЅС‹Р№ Node(Array);
+		// добавляет в nodes_stack_ указатель на добавленный Node(Array);
 		nodes_stack_.push_back(&(const_cast<Array&>(nodes_stack_.back()->AsArray()).back()));
 	}
 	if (nodes_stack_.back()->IsString())
@@ -125,9 +125,9 @@ ArrayItemContext json::Builder::StartArray()
 		const string key = nodes_stack_.back()->AsString();
 		nodes_stack_.pop_back();
 		key_buffer_.pop_back();
-		// РґРѕР±Р°РІР»СЏРµС‚ СЌР»РµРјРµРЅС‚ РІ РїРѕСЃР»РµРґРЅРёР№ РѕС‚РєСЂС‹С‚С‹Р№ СЃР»РѕРІР°СЂСЊ
+		// добавляет элемент в последний открытый словарь
 		const_cast<Dict&>(nodes_stack_.back()->AsDict()).insert({ key, Array() });
-		// РґРѕР±Р°РІР»СЏРµС‚ РІ nodes_stack_ СѓРєР°Р·Р°С‚РµР»СЊ РЅР° РґРѕР±Р°РІР»РµРЅРЅС‹Р№ Node(Array);
+		// добавляет в nodes_stack_ указатель на добавленный Node(Array);
 		nodes_stack_.push_back(&(const_cast<Dict&>(nodes_stack_.back()->AsDict())[key]));
 	};
 

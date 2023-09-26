@@ -23,6 +23,42 @@ void Transport::TransportCatalogue::SetDistance(const Stop* from, const Stop* to
 	between_stops_distances_[{from, to}] = dist;
 }
 
+const Transport::TransportCatalogue::DistanceMap& Transport::TransportCatalogue::GetDistanceMap() const
+{
+	return between_stops_distances_;
+}
+
+const std::unordered_map<const Stop*, std::set<const Bus*, BusComparator>>& Transport::TransportCatalogue::GetStopsToBuses() const
+{
+	return stop_to_buses_;
+}
+
+void Transport::TransportCatalogue::SetStops(std::deque<Stop> stops)
+{
+	stops_ = std::move(stops);
+	for (const auto& stop : stops_) {
+		stop_name_to_stop_[stop.name] = &stop;
+	}
+}
+
+void Transport::TransportCatalogue::SetBuses(std::deque<Bus> buses)
+{
+	buses_ = std::move(buses);
+	for (const auto& bus : buses_) {
+		bus_name_to_bus_[bus.name] = &bus;
+	}
+}
+
+void Transport::TransportCatalogue::SetStopToBuses(StopToRoutesMap stop_to_buses)
+{
+	stop_to_buses_ = std::move(stop_to_buses);
+}
+
+void Transport::TransportCatalogue::SetDistanceMap(DistanceMap distance_map)
+{
+	between_stops_distances_ = std::move(distance_map);
+}
+
 void Transport::TransportCatalogue::AddBus(std::string_view name, const std::vector<const Stop*>& stops, bool is_roundtrip)
 {
 	buses_.push_back({ static_cast<string>(name), stops, is_roundtrip });
@@ -108,7 +144,7 @@ size_t Transport::TransportCatalogue::GetStopsCount() const
 	return stops_.size();
 }
 
-const std::set<const Bus*, BusComparator> Transport::TransportCatalogue::GetBusesForStop(const Stop* stop) const
+const std::set<const Bus*, BusComparator> Transport::TransportCatalogue::GetStopToBuses(const Stop* stop) const
 {
 	if (stop_to_buses_.count(stop))
 	{
@@ -126,7 +162,7 @@ StopInfo TransportCatalogue::GetStopInfo(const Stop* stop_p) const
 	}
 	info.name = stop_p->name;
 
-	// РћСЃС‚Р°РЅРѕРІРєР° СЃСѓС‰РµСЃС‚РІСѓРµС‚, РЅРѕ С‡РµСЂРµР· РЅРµС‘ РЅРµ РїСЂРѕС…РѕРґРёС‚ РЅРё РѕРґРЅРѕРіРѕ РјР°СЂС€СЂСѓС‚Р°
+	// Остановка существует, но через неё не проходит ни одного маршрута
 	info.exists = true;
 
 	if (!stop_to_buses_.count(stop_p))
@@ -134,7 +170,7 @@ StopInfo TransportCatalogue::GetStopInfo(const Stop* stop_p) const
 		return info;
 	}
 
-	// РћСЃС‚Р°РЅРѕРІРєР° СЃСѓС‰РµСЃС‚РІСѓРµС‚ Рё С‡РµСЂРµР· РЅРµС‘ РїСЂРѕС…РѕРґСЏС‚ РјР°СЂС€СЂСѓС‚С‹
+	// Остановка существует и через неё проходят маршруты
 	info.buses = &stop_to_buses_.at(stop_p);
 
 	return info;

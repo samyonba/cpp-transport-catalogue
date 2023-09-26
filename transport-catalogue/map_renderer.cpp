@@ -41,7 +41,7 @@ void MapRenderer::AddRoutes()
 		return lhv->name < rhv->name;
 		});
 	for (const auto bus : routes) {
-		// СЃРЅР°С‡Р°Р»Р° РІС‹Р·С‹РІР°РµС‚СЃСЏ AddRouteTitle, С‚.Рє. AddRoute() РёР·РјРµРЅРёС‚ СЃС‡РµС‚С‡РёРє РјР°СЂС€СЂСѓС‚РѕРІ
+		// сначала вызывается AddRouteTitle, т.к. AddRoute() изменит счетчик маршрутов
 		AddRouteTitle(*bus);
 		AddRoute(*bus);
 	}
@@ -52,7 +52,7 @@ std::vector<const Stop*> GetStopsToDraw(const TransportCatalogue& catalogue) {
 	const auto all_stops = catalogue.GetStops();
 	std::copy_if(all_stops.begin(), all_stops.end(), std::back_inserter(stops_to_draw),
 		[&catalogue](const Stop* stop) {
-			return !(catalogue.GetBusesForStop(stop).empty());
+			return !(catalogue.GetStopToBuses(stop).empty());
 		});
 	std::sort(stops_to_draw.begin(), stops_to_draw.end(),
 		[](const Stop* lhv, const Stop* rhv) {
@@ -124,7 +124,7 @@ void MapRenderer::AddRouteTitle(const Bus& route)
 	title.SetFontFamily("Verdana");
 	title.SetFontWeight("bold");
 	title.SetData(route.name);
-	// СЃС‡РµС‚С‡РёРє РјР°СЂС€СЂСѓС‚РѕРІ СѓРІРµР»РёС‡РёРІР°РµС‚СЃСЏ РІ РјРµС‚РѕРґРµ AddRoute(), РєРѕС‚РѕСЂС‹Р№ РёР· РІРЅРµ РІС‹Р·С‹РІР°РµС‚СЃСЏ РІРјРµСЃС‚Рµ СЃ С‚РµРєСѓС‰РёРј РјРµС‚РѕРґРѕРј 
+	// счетчик маршрутов увеличивается в методе AddRoute(), который из вне вызывается вместе с текущим методом 
 	title.SetFillColor(settings_.color_palette[routes_count_ % settings_.color_palette.size()]);
 
 	bool is_roundtrip = route.is_roundtrip;

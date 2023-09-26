@@ -10,6 +10,26 @@ Transport::Routing::EdgeInfo Transport::Routing::TransportRouter::GetEdgeInfo(gr
 	return edges_info_[id];
 }
 
+const Transport::Routing::RouterSettings& Transport::Routing::TransportRouter::GetRouterSettings() const
+{
+	return router_settings_;
+}
+
+const std::vector<Transport::Routing::EdgeInfo>& Transport::Routing::TransportRouter::GetEdgesInfo() const
+{
+	return edges_info_;
+}
+
+const graph::DirectedWeightedGraph<double>& Transport::Routing::TransportRouter::GetGraph() const
+{
+	return graph_;
+}
+
+const graph::Router<double>& Transport::Routing::TransportRouter::GetRouter() const
+{
+	return router_;
+}
+
 graph::DirectedWeightedGraph<double> Transport::Routing::TransportRouter::BuildGraph()
 {
 	graph::DirectedWeightedGraph<double> graph(catalogue_.GetStopsCount() * 2);
@@ -22,16 +42,16 @@ void Transport::Routing::TransportRouter::AddStops(graph::DirectedWeightedGraph<
 {
 	const auto stops = catalogue_.GetStops();
 
-	//Ð”Ð¾Ð±Ð°Ð²Ð»ÑÐµÐ¼ Ñ€ÐµÐ±Ñ€Ð° Ð¼ÐµÐ¶Ð´Ñƒ Ð²ÐµÑ€ÑˆÐ¸Ð½Ð°Ð¼Ð¸ Ð²Ñ…Ð¾Ð´Ð° Ð½Ð° Ð¾ÑÑ‚Ð°Ð½Ð¾Ð²ÐºÑƒ Ð¸ Ð¾Ñ‚Ð¿Ñ€Ð°Ð²Ð»ÐµÐ½Ð¸Ñ Ñ Ð¾ÑÑ‚Ð°Ð½Ð¾Ð²ÐºÐ¸
+	//Äîáàâëÿåì ðåáðà ìåæäó âåðøèíàìè âõîäà íà îñòàíîâêó è îòïðàâëåíèÿ ñ îñòàíîâêè
 	for (size_t i = 0; i < catalogue_.GetStopsCount(); i++)
 	{
 		// { from, to, weight }
 		graph::VertexId enter_stop_index = i * 2;
 		graph::VertexId exit_stop_index = enter_stop_index + 1;
-		graph.AddEdge({ enter_stop_index, exit_stop_index, static_cast<double>(routing_settings_.bus_wait_time) });
+		graph.AddEdge({ enter_stop_index, exit_stop_index, static_cast<double>(router_settings_.bus_wait_time) });
 
 		// { span_count, name }
-		edges_info_.push_back({ 0, stops[i]->name, static_cast<double>(routing_settings_.bus_wait_time) });
+		edges_info_.push_back({ 0, stops[i]->name, static_cast<double>(router_settings_.bus_wait_time) });
 	}
 }
 
@@ -44,12 +64,12 @@ void Transport::Routing::TransportRouter::AddRoutes(graph::DirectedWeightedGraph
 			continue;
 		}
 
-		// Ð´Ð¾Ð±Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ Ñ€ÐµÐ±ÐµÑ€ ÐºÐ¾Ð»ÑŒÑ†ÐµÐ²Ð¾Ð³Ð¾ Ð¼Ð°Ñ€ÑˆÑ€ÑƒÑ‚Ð°
+		// äîáàâëåíèå ðåáåð êîëüöåâîãî ìàðøðóòà
 		if (route.is_roundtrip)
 		{
 			AddRoute(0, route.stops.size(), route, graph);
 		}
-		// Ð´Ð¾Ð±Ð°Ð²Ð»ÐµÐ½Ð¸Ðµ Ñ€ÐµÐ±ÐµÑ€ Ð½ÐµÐºÐ¾Ð»ÑŒÑ†ÐµÐ²Ð¾Ð³Ð¾ Ð¼Ð°Ñ€ÑˆÑ€ÑƒÑ‚Ð°
+		// äîáàâëåíèå ðåáåð íåêîëüöåâîãî ìàðøðóòà
 		else
 		{
 			AddRoute(0, route.stops.size() / 2 + 1, route, graph);
@@ -73,12 +93,12 @@ void Transport::Routing::TransportRouter::AddRoute(size_t from_index, size_t to_
 			weight += CalculateWeight(catalogue_.GetRealDistance(route.stops[to - 1], route.stops[to]));
 			++span_count;
 
-			// Ð•ÑÐ»Ð¸ Ð°Ð²Ñ‚Ð¾Ð±ÑƒÑ Ð´ÐµÐ»Ð°ÐµÑ‚ Ð¿ÐµÑ‚Ð»ÑŽ Ð¸ Ð¼Ñ‹ Ð¿Ð¾Ð²Ñ‚Ð¾Ñ€Ð½Ð¾ Ð¿Ð¾Ð¿Ð°Ð´Ð°ÐµÐ¼ Ð¸Ð· from Ð² to
+			// Åñëè àâòîáóñ äåëàåò ïåòëþ è ìû ïîâòîðíî ïîïàäàåì èç from â to
 			if (prev_weights.count(route.stops[to]) != 0)
 			{
 				double prev_weight = prev_weights.at(route.stops[to]);
-				// Ð•ÑÐ»Ð¸ Ð±Ñ‹ÑÑ‚Ñ€ÐµÐµ Ð¿Ð¾Ð´Ð¾Ð¶Ð´Ð°Ñ‚ÑŒ ÑÐ»ÐµÐ´ÑƒÑŽÑ‰ÐµÐ³Ð¾ Ð°Ð²Ñ‚Ð¾Ð±ÑƒÑÐ°, Ð° Ð½Ðµ Ð´ÐµÐ»Ð°Ñ‚ÑŒ Ð¿ÐµÑ‚Ð»ÑŽ, Ð´Ð°Ð»ÑŒÐ½ÐµÐ¹ÑˆÐ¸Ðµ Ñ€Ð°ÑÑ‡ÐµÑ‚Ñ‹ Ð¸Ð· Ñ‚ÐµÐºÑƒÑ‰ÐµÐ¹ Ð¾ÑÑ‚Ð°Ð½Ð¾Ð²ÐºÐ¸ Ð¿Ñ€ÐµÐºÑ€Ð°Ñ‰Ð°ÑŽÑ‚ÑÑ
-				if (weight >= prev_weight + routing_settings_.bus_wait_time)
+				// Åñëè áûñòðåå ïîäîæäàòü ñëåäóþùåãî àâòîáóñà, à íå äåëàòü ïåòëþ, äàëüíåéøèå ðàñ÷åòû èç òåêóùåé îñòàíîâêè ïðåêðàùàþòñÿ
+				if (weight >= prev_weight + router_settings_.bus_wait_time)
 				{
 					break;
 				}
@@ -104,5 +124,52 @@ std::unordered_map<const Transport::Stop*, size_t> Transport::Routing::Transport
 double Transport::Routing::TransportRouter::CalculateWeight(double distance) const
 {
 	double real_time_to_duration = 1000. / 60;
-	return distance / routing_settings_.bus_velocity / real_time_to_duration;
+	return distance / router_settings_.bus_velocity / real_time_to_duration;
+}
+
+Transport::Routing::LightTransportRouter::LightTransportRouter(const TransportCatalogue& catalogue, const std::vector<EdgeInfo>& edges_info, const std::vector<graph::Edge<double>>& edges, const graph::Router<double>::RoutesInternalData& routes_internal_data)
+	: catalogue_(catalogue),
+	edges_info_(edges_info),
+	edges_(edges),
+	routes_internal_data_(routes_internal_data),
+	vertex_index_(std::move(BuildVertexIndex()))
+{
+}
+
+std::optional<graph::Router<double>::RouteInfo> Transport::Routing::LightTransportRouter::BuildRoute(std::string_view from_name, std::string_view to_name) const
+{
+	auto from = vertex_index_.at(catalogue_.GetStop(from_name));
+	auto to = vertex_index_.at(catalogue_.GetStop(to_name));
+
+	const auto& route_internal_data = routes_internal_data_.at(from).at(to);
+	if (!route_internal_data) {
+		return std::nullopt;
+	}
+	const auto weight = route_internal_data->weight;
+	std::vector<graph::EdgeId> edges;
+	for (std::optional<graph::EdgeId> edge_id = route_internal_data->prev_edge;
+		edge_id;
+		edge_id = routes_internal_data_[from][edges_.at(*edge_id).from]->prev_edge)
+	{
+		edges.push_back(*edge_id);
+	}
+	std::reverse(edges.begin(), edges.end());
+
+	return graph::Router<double>::RouteInfo{ weight, std::move(edges) };
+}
+
+Transport::Routing::EdgeInfo Transport::Routing::LightTransportRouter::GetEdgeInfo(graph::EdgeId id) const
+{
+	return edges_info_.at(id);
+}
+
+std::unordered_map<const Transport::Stop*, size_t> Transport::Routing::LightTransportRouter::BuildVertexIndex()
+{
+	const auto stops = catalogue_.GetStops();
+	std::unordered_map<const Transport::Stop*, size_t> index;
+	for (size_t i = 0; i < stops.size(); i++)
+	{
+		index[stops[i]] = i * 2;
+	}
+	return index;
 }

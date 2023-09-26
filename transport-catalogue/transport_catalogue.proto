@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+import "transport_router.proto";
+
+package tc_serialization;
+
+message TransportCatalogue {
+	StopList stop_list = 1;
+	BusList bus_list = 2;
+	DistanceMap distance_map = 3;
+	StopRoutesMap stop_routes_map = 4;
+	RenderSettings render_settings = 5;
+	TransportRouter transport_router = 6;
+}
+
+message Stop {
+	bytes name = 1;
+	uint32 stop_id = 2;
+	double lat_coord = 3;
+	double lng_coord = 4;
+}
+
+message StopList {
+	repeated Stop stop = 1;
+}
+
+message Bus {
+	bytes name = 1;
+	uint32 bus_id = 2;
+	bool is_roundtrip = 3;
+	repeated uint32 stop_id = 4;
+}
+
+message BusList {
+	repeated Bus bus = 1;
+}
+
+message StopRoutes {
+	uint32 stop_id = 1;
+	repeated uint32 bus_id = 2;
+}
+
+message StopRoutesMap {
+	repeated StopRoutes stop = 1;
+}
+
+message Distance {
+	uint32 from = 1;
+	uint32 to = 2;
+	uint32 distance = 3;
+}
+
+message DistanceMap {
+	repeated Distance distance = 1;
+}
+
+message Color {
+	bytes type = 1;
+	bytes string_color = 2;
+	uint32 r = 3;
+	uint32 g = 4;
+	uint32 b = 5;
+	double a = 6;
+}
+
+message RenderSettings {
+	double width = 1;
+	double height = 2;
+	double padding = 3;
+	double line_width = 4;
+	double stop_radius = 5;
+	uint32 bus_label_font_size = 6;
+	double bus_label_x_offset = 7;
+	double bus_label_y_offset = 8;
+	uint32 stop_label_font_size = 9;
+	double stop_label_x_offset = 10;
+	double stop_label_y_offset = 11;
+	Color underlayer_color = 12;
+	double underlayer_width = 13;
+	repeated Color color_palette = 14;
+}

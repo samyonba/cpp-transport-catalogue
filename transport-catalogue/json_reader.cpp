@@ -11,10 +11,10 @@ void Transport::JsonReader::ReadInput()
 {
     using namespace json;
 
-    // СЃР»РѕРІР°СЂСЊ РёР· { base_requests:... , stat_requests:... }
+    // словарь из { base_requests:... , stat_requests:... }
     Document document = Load(in_);
 
-    // РІРµРєС‚РѕСЂ Р·Р°РїСЂРѕСЃРѕРІ (РјР°СЂС€СЂСѓС‚С‹/РѕСЃС‚Р°РЅРѕРІРєРё)
+    // вектор запросов (маршруты/остановки)
     const auto& base_requests = document.GetRoot().AsDict().at("base_requests").AsArray();
     ReadBaseRequests(base_requests);
 
@@ -24,10 +24,81 @@ void Transport::JsonReader::ReadInput()
     const auto& router_settings = document.GetRoot().AsDict().at("routing_settings").AsDict();
     ReadRouterSettings(router_settings);
 
+    const auto& serialization_settings = document.GetRoot().AsDict().at("serialization_settings").AsDict();
+    ReadSerializationSettings(serialization_settings);
+
     out_ << "[\n";
     const auto& stat_requests = document.GetRoot().AsDict().at("stat_requests").AsArray();
     ReadStatRequests(stat_requests);
     out_ << "]\n";
+}
+
+void Transport::JsonReader::ReadMakeBaseInput()
+{
+    using namespace json;
+
+    // словарь из { base_requests:... , stat_requests:... }
+    Document document = Load(in_);
+
+    // вектор запросов (маршруты/остановки)
+    const auto& base_requests = document.GetRoot().AsDict().at("base_requests").AsArray();
+    ReadBaseRequests(base_requests);
+
+    const auto& serialization_settings = document.GetRoot().AsDict().at("serialization_settings").AsDict();
+    ReadSerializationSettings(serialization_settings);
+
+    const auto& render_settings = document.GetRoot().AsDict().at("render_settings").AsDict();
+    ReadRenderSettings(render_settings);
+
+    const auto& router_settings = document.GetRoot().AsDict().at("routing_settings").AsDict();
+    ReadRouterSettings(router_settings);
+}
+
+void Transport::JsonReader::ReadProcessRequest()
+{
+    using namespace json;
+
+    // словарь из { base_requests:... , stat_requests:... }
+    Document document = Load(in_);
+
+    const auto& serialization_settings = document.GetRoot().AsDict().at("serialization_settings").AsDict();
+    ReadSerializationSettings(serialization_settings);
+
+    saved_stat_requests_ = document.GetRoot().AsDict().at("stat_requests").AsArray();
+}
+
+void Transport::JsonReader::ProcessStatRequests(Routing::TransportRouter& router)
+{
+    out_ << "[\n";
+    ReadStatRequests(saved_stat_requests_);
+    out_ << "]\n";
+}
+
+void Transport::JsonReader::ProcessStatRequests(const Routing::LightTransportRouter& router)
+{
+    out_ << "[\n";
+    ReadStatRequests(saved_stat_requests_, router);
+    out_ << "]\n";
+}
+
+std::string Transport::JsonReader::GetSerializationFileName() const
+{
+    return serialization_settings_;
+}
+
+const Rendering::RenderSettings& Transport::JsonReader::GetRenderSettings() const
+{
+    return render_settings_;
+}
+
+const Transport::Routing::RouterSettings& Transport::JsonReader::GetRouterSettings() const
+{
+    return routing_settings_;
+}
+
+void Transport::JsonReader::SetRenderSettings(Transport::Rendering::RenderSettings settings)
+{
+    render_settings_ = std::move(settings);
 }
 
 svg::Color ReadColor(json::Node node) {
@@ -108,8 +179,8 @@ void Transport::JsonReader::ReadBus(const json::Dict& attributes) {
 
 void Transport::JsonReader::ReadBaseRequests(const json::Array& base_requests) {
 
-    // РїСЂРё РїРµСЂРІРѕРј РїСЂРѕС…РѕРґРµ РїРѕ Р·Р°РїСЂРѕСЃР°Рј РґРѕР±Р°РІР»СЏРµРј С‚РѕР»СЊРєРѕ РґР°РЅРЅС‹Рµ Рѕ СЃР°РјРёС… РѕСЃС‚Р°РЅРѕРІРєР°С…
-    // request - СЃР»РѕРІР°СЂСЊ { Р°С‚СЂРёР±СѓС‚ - Р·РЅР°С‡РµРЅРёРµ }
+    // при первом проходе по запросам добавляем только данные о самих остановках
+    // request - словарь { атрибут - значение }
     for (const auto& request : base_requests) {
         auto& attributes = request.AsDict();
         if (attributes.at("type").AsString() == "Stop")
@@ -118,7 +189,7 @@ void Transport::JsonReader::ReadBaseRequests(const json::Array& base_requests) {
         }
     }
 
-    // РїСЂРё РІС‚РѕСЂРѕРј РїСЂРѕС…РѕРґРµ РґРѕР±Р°РІР»СЏРµРј РґР°РЅРЅС‹Рµ Рѕ СЂР°СЃСЃС‚РѕСЏРЅРёСЏС… РјРµР¶РґСѓ РѕСЃС‚Р°РЅРѕРІРєР°РјРё Рё Рѕ РјР°СЂС€СЂСѓС‚Р°С…
+    // при втором проходе добавляем данные о расстояниях между остановками и о маршрутах
     for (const auto& request : base_requests) {
         auto& attributes = request.AsDict();
 
@@ -137,6 +208,11 @@ void Transport::JsonReader::ReadRouterSettings(const json::Dict& attributes)
 {
     routing_settings_.bus_wait_time = attributes.at("bus_wait_time").AsInt();
     routing_settings_.bus_velocity = attributes.at("bus_velocity").AsInt();
+}
+
+void Transport::JsonReader::ReadSerializationSettings(const json::Dict& attributes)
+{
+    serialization_settings_ = attributes.at("file").AsString();
 }
 
 void Transport::JsonReader::PrintJsonStopInfo(const Transport::StopInfo& info, int request_id) {
@@ -265,11 +341,90 @@ void Transport::JsonReader::PrintJsonRoute(const string_view from, const string_
 	json::Print(json::Document(b.EndDict().Build()), out_);
 }
 
+void Transport::JsonReader::PrintJsonRoute(const std::string_view from, const std::string_view to, int request_id, const Routing::LightTransportRouter& router)
+{
+    auto route_info = router.BuildRoute(from, to);
+
+    json::Builder builder;
+    auto b = builder.StartDict()
+        .Key("request_id"s).Value(request_id);
+    if (!route_info)
+    {
+        b.Key("error_message"s).Value("not found"s);
+    }
+    else
+    {
+        auto items = b.Key("total_time"s).Value(route_info.value().weight)
+            .Key("items"s).StartArray();
+
+        auto PrintItem = [&](graph::EdgeId id) {
+            json::Builder builder;
+            auto c = builder.StartDict();
+            auto info = router.GetEdgeInfo(id);
+            if (info.span_count == 0)
+            {
+                c.Key("type"s).Value("Wait"s)
+                    .Key("stop_name"s).Value(info.name);
+            }
+            else
+            {
+                c.Key("type"s).Value("Bus"s)
+                    .Key("bus"s).Value(info.name)
+                    .Key("span_count").Value(int(info.span_count));
+            }
+            c.Key("time"s).Value(info.weight);
+            return c.EndDict().Build();
+        };
+
+        for (const auto& edge_id : route_info.value().edges)
+        {
+            items.Value(PrintItem(edge_id));
+        }
+        items.EndArray();
+    }
+    json::Print(json::Document(b.EndDict().Build()), out_);
+}
+
 void Transport::JsonReader::ReadStatRequests(const json::Array& stat_requests) {
 
-    // РјР°СЂС€СЂСѓС‚РёР·Р°С‚РѕСЂ СЃРѕР·РґР°РµС‚СЃСЏ РѕРґРёРЅ СЂР°Р· РїРµСЂРµРґ РѕР±СЂР°Р±РѕС‚РєРѕР№ РІСЃРµС… Р·Р°РїСЂРѕСЃРѕРІ
-    Routing::TransportRouter router(catalogue_, routing_settings_);
+    // маршрутизатор создается один раз перед обработкой всех запросов
+    //Routing::TransportRouter router(catalogue_, routing_settings_);
 
+    for (size_t i = 0; i < stat_requests.size(); i++)
+    {
+        if (i != 0)
+        {
+            out_ << ",\n";
+        }
+        auto& attributes = stat_requests[i].AsDict();
+
+        string type = attributes.at("type").AsString();
+        int request_id = attributes.at("id").AsInt();
+        if (type == "Stop")
+        {
+            auto& name = attributes.at("name").AsString();
+            PrintJsonStopInfo(catalogue_.GetStopInfo(catalogue_.GetStop(name)), request_id);
+        }
+        if (type == "Bus")
+        {
+            auto& name = attributes.at("name").AsString();
+            PrintJsonBusInfo(catalogue_.GetBusInfo(catalogue_.GetBus(name)), request_id);
+        }
+        if (type == "Map")
+        {
+            PrintJsonMap(request_id);
+        }
+        /*if (type == "Route")
+        {
+            auto& from = attributes.at("from").AsString();
+            auto& to = attributes.at("to").AsString();
+            PrintJsonRoute(from, to, request_id, router);
+        }*/
+    }
+}
+
+void Transport::JsonReader::ReadStatRequests(const json::Array& stat_requests, const Routing::LightTransportRouter& router)
+{
     for (size_t i = 0; i < stat_requests.size(); i++)
     {
         if (i != 0)
