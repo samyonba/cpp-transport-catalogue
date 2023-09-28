@@ -2,4 +2,14 @@ syntax = "proto3";
 
 package tc_serialization;
 
+message Edge {
+	uint32 from = 1;
+	uint32 to = 2;
+	double weight = 3;
+}
 
+message EdgeInfo {
+	uint32 span_count = 1;
+	bytes name = 2;
+	double weight = 3;
+}

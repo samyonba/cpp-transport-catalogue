@@ -1,5 +1,8 @@
 syntax = "proto3";
 
+import "graph.proto";
+import "map_renderer.proto";
+import "svg.proto";
 import "transport_router.proto";
 
 package tc_serialization;
@@ -52,30 +55,4 @@ message Distance {
 
 message DistanceMap {
 	repeated Distance distance = 1;
-}
-
-message Color {
-	bytes type = 1;
-	bytes string_color = 2;
-	uint32 r = 3;
-	uint32 g = 4;
-	uint32 b = 5;
-	double a = 6;
-}
-
-message RenderSettings {
-	double width = 1;
-	double height = 2;
-	double padding = 3;
-	double line_width = 4;
-	double stop_radius = 5;
-	uint32 bus_label_font_size = 6;
-	double bus_label_x_offset = 7;
-	double bus_label_y_offset = 8;
-	uint32 stop_label_font_size = 9;
-	double stop_label_x_offset = 10;
-	double stop_label_y_offset = 11;
-	Color underlayer_color = 12;
-	double underlayer_width = 13;
-	repeated Color color_palette = 14;
 }

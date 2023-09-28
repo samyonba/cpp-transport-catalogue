@@ -1,24 +1,14 @@
 syntax = "proto3";
 
-package tc_serialization;
+import "graph.proto";
 
-message EdgeInfo {
-	uint32 span_count = 1;
-	bytes name = 2;
-	double weight = 3;
-}
+package tc_serialization;
 
 message RouteInternalData {
 	bool exist = 1;
 	double weight = 2;
 	bool has_prev_edge = 3;
 	uint32 prev_edge = 4;
-}
-
-message Edge {
-	uint32 from = 1;
-	uint32 to = 2;
-	double weight = 3;
 }
 
 message TransportRouter {

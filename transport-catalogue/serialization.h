@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string_view>
-#include <C:/Users/1/Documents/Practicum/Projects/TransportCatalogue_CMake/build/transport_catalogue.pb.h>
+#include <transport_catalogue.pb.h>
 #include "transport_catalogue.h"
 #include "map_renderer.h"
 
@@ -18,11 +18,10 @@ namespace Transport {
 using namespace Transport;
 
 namespace serialization {
-	void SerializeTransportCatalogue(const TransportCatalogue& catalogue,
-		std::string_view filename,
+	void SerializeTransportCatalogue(const TransportCatalogue& catalogue, std::string filename,
 		const Rendering::RenderSettings& render_settings,
 		const Routing::RouterSettings& router_settings);
 
-	Routing::LightTransportRouter DeserializeTransportCatalogue(std::string_view filename,
+	Routing::LightTransportRouter DeserializeTransportCatalogue(std::string filename,
 		Transport::TransportCatalogue& catalogue, Rendering::RenderSettings& render_settings);
 }

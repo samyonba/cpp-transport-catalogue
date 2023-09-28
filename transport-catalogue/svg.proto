@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package tc_serialization;
+
+message Color {
+	bytes type = 1;
+	bytes string_color = 2;
+	uint32 r = 3;
+	uint32 g = 4;
+	uint32 b = 5;
+	double a = 6;
+}
